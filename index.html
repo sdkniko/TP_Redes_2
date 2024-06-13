@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Gráfico de Temperaturas</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+  <canvas id="temperatureChart"></canvas>
+
+  <script>
+    const ctx = document.getElementById('temperatureChart').getContext('2d');
+
+    const temperatureChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Temperatura',
+          data: [],
+          backgroundColor: 'rgba(75, 192, 192, 0.2)',
+          borderColor: 'rgba(75, 192, 192, 1)',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        scales: {
+          y: {
+            beginAtZero: true
+          }
+        }
+      }
+    });
+
+    function fetchTemperatures() {
+      axios.get('http://localhost:3000/temperatures')
+        .then(response => {
+          const temperatures = response.data;
+
+          // Calcula el límite de tiempo para las últimas 6 horas
+          const now = new Date();
+          const sixHoursAgo = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+
+          // Filtra los datos para incluir solo los últimos 6 horas
+          const filteredTemperatures = temperatures.filter(temp => {
+            const timestamp = new Date(temp.timestamp);
+            return timestamp >= sixHoursAgo;
+          });
+
+          // Selecciona solo algunos puntos de datos para espaciar más la gráfica
+          const spacedTemperatures = filteredTemperatures.filter((temp, index) => index % 5 === 0);
+
+          const labels = spacedTemperatures.map(temp => new Date(temp.timestamp).toLocaleTimeString());
+          const data = spacedTemperatures.map(temp => temp.temperature);
+
+          temperatureChart.data.labels = labels;
+          temperatureChart.data.datasets[0].data = data;
+          temperatureChart.update();
+        })
+        .catch(error => {
+          console.error('Error al obtener las temperaturas:', error);
+        });
+    }
+
+    // Obtener temperaturas cada 6 segundos
+    setInterval(fetchTemperatures, 2000);
+
+    // Inicializar la obtención de datos al cargar la página
+    fetchTemperatures();
+  </script>
+</body>
+</html>
